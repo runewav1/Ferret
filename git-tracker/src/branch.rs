@@ -110,10 +110,10 @@ pub struct BranchSummary {
 impl From<&BranchInfo> for BranchSummary {
     fn from(info: &BranchInfo) -> Self {
         Self {
-            name:        info.name.clone(),
+            name: info.name.clone(),
             is_detached: info.is_detached,
-            ahead:       info.ahead,
-            behind:      info.behind,
+            ahead: info.ahead,
+            behind: info.behind,
         }
     }
 }
@@ -168,17 +168,11 @@ fn resolve_head_info(repo: &Repository) -> (String, bool, Option<String>) {
     match repo.head() {
         Ok(head_ref) => {
             // Peel to commit for the SHA (may fail on an empty branch).
-            let head_sha = head_ref
-                .peel_to_commit()
-                .ok()
-                .map(|c| c.id().to_string());
+            let head_sha = head_ref.peel_to_commit().ok().map(|c| c.id().to_string());
 
             if head_ref.is_branch() {
                 // Normal attached HEAD.
-                let name = head_ref
-                    .shorthand()
-                    .unwrap_or("(unknown)")
-                    .to_string();
+                let name = head_ref.shorthand().unwrap_or("(unknown)").to_string();
                 (name, false, head_sha)
             } else {
                 // Detached HEAD – use first 8 chars of the SHA as the name.
@@ -226,11 +220,7 @@ fn resolve_upstream(repo: &Repository, branch_name: &str) -> (Option<String>, u3
     };
 
     // Get the upstream shorthand name (e.g. "origin/main").
-    let upstream_name = upstream_branch
-        .name()
-        .ok()
-        .flatten()
-        .map(str::to_owned);
+    let upstream_name = upstream_branch.name().ok().flatten().map(str::to_owned);
 
     // We need the OIDs of both tips to compute ahead/behind.
     let local_oid = match local_branch.get().peel_to_commit() {
@@ -564,12 +554,12 @@ mod tests {
     #[test]
     fn display_name_returns_name_when_not_detached() {
         let info = BranchInfo {
-            name:        "feature/foo".to_string(),
+            name: "feature/foo".to_string(),
             is_detached: false,
-            upstream:    None,
-            ahead:       0,
-            behind:      0,
-            head_sha:    None,
+            upstream: None,
+            ahead: 0,
+            behind: 0,
+            head_sha: None,
         };
         assert_eq!(info.display_name(), "feature/foo");
     }
@@ -577,12 +567,12 @@ mod tests {
     #[test]
     fn display_name_returns_detached_head_when_detached() {
         let info = BranchInfo {
-            name:        "abc12345".to_string(),
+            name: "abc12345".to_string(),
             is_detached: true,
-            upstream:    None,
-            ahead:       0,
-            behind:      0,
-            head_sha:    None,
+            upstream: None,
+            ahead: 0,
+            behind: 0,
+            head_sha: None,
         };
         assert_eq!(info.display_name(), "(detached HEAD)");
     }
@@ -590,44 +580,69 @@ mod tests {
     #[test]
     fn divergence_summary_various_cases() {
         let base = BranchInfo {
-            name:        "main".into(),
+            name: "main".into(),
             is_detached: false,
-            upstream:    Some("origin/main".into()),
-            ahead:       0,
-            behind:      0,
-            head_sha:    None,
+            upstream: Some("origin/main".into()),
+            ahead: 0,
+            behind: 0,
+            head_sha: None,
         };
 
         assert_eq!(base.divergence_summary(), "up to date");
 
-        let ahead_only = BranchInfo { ahead: 3, ..base.clone() };
+        let ahead_only = BranchInfo {
+            ahead: 3,
+            ..base.clone()
+        };
         assert_eq!(ahead_only.divergence_summary(), "↑3");
 
-        let behind_only = BranchInfo { behind: 4, ..base.clone() };
+        let behind_only = BranchInfo {
+            behind: 4,
+            ..base.clone()
+        };
         assert_eq!(behind_only.divergence_summary(), "↓4");
 
-        let diverged = BranchInfo { ahead: 3, behind: 1, ..base.clone() };
+        let diverged = BranchInfo {
+            ahead: 3,
+            behind: 1,
+            ..base.clone()
+        };
         assert_eq!(diverged.divergence_summary(), "↑3 ↓1");
 
-        let no_upstream = BranchInfo { upstream: None, ..base.clone() };
+        let no_upstream = BranchInfo {
+            upstream: None,
+            ..base.clone()
+        };
         assert_eq!(no_upstream.divergence_summary(), "no upstream");
     }
 
     #[test]
     fn is_clean_tracking_requires_upstream_and_zero_counts() {
         let synced = BranchInfo {
-            name:        "main".into(),
+            name: "main".into(),
             is_detached: false,
-            upstream:    Some("origin/main".into()),
-            ahead:       0,
-            behind:      0,
-            head_sha:    None,
+            upstream: Some("origin/main".into()),
+            ahead: 0,
+            behind: 0,
+            head_sha: None,
         };
         assert!(synced.is_clean_tracking());
 
-        assert!(!BranchInfo { ahead: 1, ..synced.clone() }.is_clean_tracking());
-        assert!(!BranchInfo { behind: 1, ..synced.clone() }.is_clean_tracking());
-        assert!(!BranchInfo { upstream: None, ..synced.clone() }.is_clean_tracking());
+        assert!(!BranchInfo {
+            ahead: 1,
+            ..synced.clone()
+        }
+        .is_clean_tracking());
+        assert!(!BranchInfo {
+            behind: 1,
+            ..synced.clone()
+        }
+        .is_clean_tracking());
+        assert!(!BranchInfo {
+            upstream: None,
+            ..synced.clone()
+        }
+        .is_clean_tracking());
     }
 
     // ── Serde round-trips ──
@@ -635,12 +650,12 @@ mod tests {
     #[test]
     fn branch_info_serde_roundtrip() {
         let info = BranchInfo {
-            name:        "feat/serde".into(),
+            name: "feat/serde".into(),
             is_detached: false,
-            upstream:    Some("origin/feat/serde".into()),
-            ahead:       2,
-            behind:      1,
-            head_sha:    Some("a".repeat(40)),
+            upstream: Some("origin/feat/serde".into()),
+            ahead: 2,
+            behind: 1,
+            head_sha: Some("a".repeat(40)),
         };
 
         let json = serde_json::to_string(&info).expect("serialize BranchInfo");
@@ -657,10 +672,10 @@ mod tests {
     #[test]
     fn branch_summary_serde_roundtrip() {
         let summary = BranchSummary {
-            name:        "main".into(),
+            name: "main".into(),
             is_detached: false,
-            ahead:       5,
-            behind:      3,
+            ahead: 5,
+            behind: 3,
         };
 
         let json = serde_json::to_string(&summary).expect("serialize BranchSummary");
@@ -675,17 +690,17 @@ mod tests {
     #[test]
     fn branch_summary_from_branch_info() {
         let info = BranchInfo {
-            name:        "develop".into(),
+            name: "develop".into(),
             is_detached: false,
-            upstream:    Some("origin/develop".into()),
-            ahead:       7,
-            behind:      2,
-            head_sha:    Some("b".repeat(40)),
+            upstream: Some("origin/develop".into()),
+            ahead: 7,
+            behind: 2,
+            head_sha: Some("b".repeat(40)),
         };
 
         let summary = BranchSummary::from(&info);
         assert_eq!(summary.name, "develop");
-        assert_eq!(summary.is_detached, false);
+        assert!(!summary.is_detached);
         assert_eq!(summary.ahead, 7);
         assert_eq!(summary.behind, 2);
     }

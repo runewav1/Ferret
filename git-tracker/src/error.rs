@@ -7,7 +7,6 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum TrackerError {
     // ── I/O ──────────────────────────────────────────────────────────────────
-
     /// A low-level OS / file-system error.
     #[error("I/O error at `{path}`: {source}")]
     Io {
@@ -24,7 +23,6 @@ pub enum TrackerError {
     IoPlain(#[from] std::io::Error),
 
     // ── Git / libgit2 ─────────────────────────────────────────────────────────
-
     /// libgit2 returned an error.
     #[error("Git error: {0}")]
     Git(#[from] git2::Error),
@@ -38,7 +36,6 @@ pub enum TrackerError {
     UnbornHead(PathBuf),
 
     // ── Worktree ──────────────────────────────────────────────────────────────
-
     /// A `.git` file pointed to a location that does not exist or is
     /// not a valid git directory.
     #[error("Broken worktree link in `{}`: target `{}` not found", .link.display(), .target.display())]
@@ -54,7 +51,6 @@ pub enum TrackerError {
     WorktreeMainRepoUnresolvable(PathBuf),
 
     // ── Scanner ───────────────────────────────────────────────────────────────
-
     /// One of the root directories passed to the scanner does not exist.
     #[error("Scan root does not exist: `{}`", .0.display())]
     ScanRootMissing(PathBuf),
@@ -64,7 +60,6 @@ pub enum TrackerError {
     DirEntry(String),
 
     // ── Snapshot ──────────────────────────────────────────────────────────────
-
     /// The snapshot file could not be parsed.
     #[error("Snapshot parse error in `{}`: {source}", .path.display())]
     SnapshotParse {
@@ -80,7 +75,6 @@ pub enum TrackerError {
     SnapshotSerialize(#[source] serde_json::Error),
 
     // ── Watcher ───────────────────────────────────────────────────────────────
-
     /// The underlying `notify` watcher failed to initialise.
     #[error("File-system watcher error: {0}")]
     WatcherInit(String),
@@ -95,7 +89,6 @@ pub enum TrackerError {
     },
 
     // ── Relocator ─────────────────────────────────────────────────────────────
-
     /// No candidate location was found for a moved repository.
     #[error("Could not locate repository `{name}` (fingerprint {fingerprint}) after move")]
     RepoNotFound {
@@ -107,9 +100,7 @@ pub enum TrackerError {
 
     /// Multiple equally-good candidates were found and the caller must
     /// disambiguate.
-    #[error(
-        "Ambiguous relocation for `{name}`: {count} equally-scored candidates found",
-    )]
+    #[error("Ambiguous relocation for `{name}`: {count} equally-scored candidates found")]
     AmbiguousRelocation {
         /// The repository name that could not be unambiguously relocated.
         name: String,
@@ -118,7 +109,6 @@ pub enum TrackerError {
     },
 
     // ── Identity ──────────────────────────────────────────────────────────────
-
     /// The repository's fingerprint could not be computed.
     #[error("Cannot compute fingerprint for `{}`: {reason}", .path.display())]
     FingerprintFailed {
@@ -129,7 +119,6 @@ pub enum TrackerError {
     },
 
     // ── Generic ───────────────────────────────────────────────────────────────
-
     /// A catch-all for contextual messages added at call sites.
     #[error("{context}: {source}")]
     WithContext {
@@ -252,8 +241,7 @@ mod tests {
 
     #[test]
     fn context_trait_on_result() {
-        let res: std::result::Result<(), std::io::Error> =
-            Err(std::io::Error::new(std::io::ErrorKind::Other, "boom"));
+        let res: std::result::Result<(), std::io::Error> = Err(std::io::Error::other("boom"));
         let tracked: Result<()> = res.context("doing something");
         assert!(tracked.unwrap_err().to_string().contains("doing something"));
     }

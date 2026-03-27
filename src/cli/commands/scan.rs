@@ -3,14 +3,14 @@ use std::path::PathBuf;
 
 use crate::registry::RegistryManager;
 
-const RESET:   &str = "\x1b[0m";
-const BOLD:    &str = "\x1b[1m";
-const CYAN:    &str = "\x1b[36m";
-const YELLOW:  &str = "\x1b[33m";
-const GREEN:   &str = "\x1b[32m";
+const RESET: &str = "\x1b[0m";
+const BOLD: &str = "\x1b[1m";
+const CYAN: &str = "\x1b[36m";
+const YELLOW: &str = "\x1b[33m";
+const GREEN: &str = "\x1b[32m";
 const MAGENTA: &str = "\x1b[35m";
-const DIM:     &str = "\x1b[2m";
-const RED:     &str = "\x1b[31m";
+const DIM: &str = "\x1b[2m";
+const RED: &str = "\x1b[31m";
 
 /// Scan one or more directories for git repositories.
 ///
@@ -93,16 +93,13 @@ pub fn execute(args: &ScanArgs) -> crate::error::Result<()> {
     let config = config_builder.build();
 
     // ── Run the scan ──────────────────────────────────────────────────────────
-    println!(
-        "  {}{}Scanning…{}",
-        BOLD, CYAN, RESET
-    );
+    println!("  {}{}Scanning…{}", BOLD, CYAN, RESET);
 
     let result = git_tracker::scanner::Scanner::new(config)
         .scan_with_stats()
         .map_err(|e| crate::error::FerretError::GitError(e.to_string()))?;
 
-    let records   = &result.records;
+    let records = &result.records;
     let scan_stats = &result.stats;
 
     if records.is_empty() {
@@ -122,22 +119,22 @@ pub fn execute(args: &ScanArgs) -> crate::error::Result<()> {
 
         // ── Name + worktree kind badge ────────────────────────────────────────
         let kind_badge = match &record.worktree_kind {
-            Some(git_tracker::WorktreeKind::Main)         => "main",
+            Some(git_tracker::WorktreeKind::Main) => "main",
             Some(git_tracker::WorktreeKind::Linked { .. }) => "linked-worktree",
-            Some(git_tracker::WorktreeKind::Bare)          => "bare",
+            Some(git_tracker::WorktreeKind::Bare) => "bare",
             None => "repo",
         };
 
         println!(
             "  {}{}{}{} {}({}){} ",
-            BOLD, CYAN, record.name, RESET,
-            DIM, kind_badge, RESET,
+            BOLD, CYAN, record.name, RESET, DIM, kind_badge, RESET,
         );
 
         // ── Path ──────────────────────────────────────────────────────────────
         println!(
             "    {}Path:{}      {}",
-            YELLOW, RESET,
+            YELLOW,
+            RESET,
             crate::pathutil::normalize_path(&record.workdir),
         );
 
@@ -154,11 +151,10 @@ pub fn execute(args: &ScanArgs) -> crate::error::Result<()> {
                 .as_deref()
                 .map(|u| format!(" {}→ {}{}", DIM, u, RESET))
                 .unwrap_or_default();
+            let branch_suffix = format!("{}{}", divergence, upstream_hint);
             println!(
                 "    {}Branch:{}    {}{}{}{}",
-                YELLOW, RESET,
-                GREEN, branch, RESET,
-                format!("{}{}", divergence, upstream_hint),
+                YELLOW, RESET, GREEN, branch, RESET, branch_suffix,
             );
         } else if record.is_bare {
             println!(
@@ -174,10 +170,7 @@ pub fn execute(args: &ScanArgs) -> crate::error::Result<()> {
 
         // ── Linked-worktree extra info ─────────────────────────────────────
         if let Some(git_tracker::WorktreeKind::Linked { name }) = &record.worktree_kind {
-            println!(
-                "    {}Worktree:{}  linked as \"{}\"",
-                YELLOW, RESET, name,
-            );
+            println!("    {}Worktree:{}  linked as \"{}\"", YELLOW, RESET, name,);
         }
 
         // ── Fingerprint (opt-in) ──────────────────────────────────────────────
@@ -185,7 +178,11 @@ pub fn execute(args: &ScanArgs) -> crate::error::Result<()> {
             if let Some(fp) = &record.fingerprint {
                 println!(
                     "    {}FP:{}        {}{}{}",
-                    YELLOW, RESET, DIM, fp.short(), RESET,
+                    YELLOW,
+                    RESET,
+                    DIM,
+                    fp.short(),
+                    RESET,
                 );
             }
         }
@@ -200,7 +197,8 @@ pub fn execute(args: &ScanArgs) -> crate::error::Result<()> {
     println!();
     println!(
         "  {}{}{}  {} repositor{} found{}",
-        BOLD, MAGENTA,
+        BOLD,
+        MAGENTA,
         records.len(),
         RESET,
         if records.len() == 1 { "y" } else { "ies" },
@@ -227,9 +225,9 @@ pub fn execute(args: &ScanArgs) -> crate::error::Result<()> {
 fn add_to_registry(records: &[git_tracker::RepoRecord]) -> crate::error::Result<()> {
     let mut manager = RegistryManager::new()?;
 
-    let mut added   = 0usize;
+    let mut added = 0usize;
     let mut skipped = 0usize;
-    let mut failed  = 0usize;
+    let mut failed = 0usize;
 
     for record in records {
         // Skip linked worktrees when adding — only add canonical repo roots.
@@ -252,10 +250,8 @@ fn add_to_registry(records: &[git_tracker::RepoRecord]) -> crate::error::Result<
             }
             Err(e) => {
                 eprintln!(
-                    "  {}✗{} Failed  {} — {}{}{}",
-                    RED, RESET,
-                    record.name,
-                    DIM, e, RESET,
+                    "  {}Error:{} Failed  {} — {}{}{}",
+                    RED, RESET, record.name, DIM, e, RESET,
                 );
                 failed += 1;
             }
@@ -265,10 +261,18 @@ fn add_to_registry(records: &[git_tracker::RepoRecord]) -> crate::error::Result<
     println!();
     println!(
         "  Registry: {}{}+{}{}  added  {}{}{}{}  skipped  {}{}{}{} failed",
-        BOLD, GREEN,  added,   RESET,
-        BOLD, DIM,    skipped, RESET,
+        BOLD,
+        GREEN,
+        added,
+        RESET,
+        BOLD,
+        DIM,
+        skipped,
+        RESET,
         if failed > 0 { RED } else { DIM },
-        BOLD, failed, RESET,
+        BOLD,
+        failed,
+        RESET,
     );
 
     Ok(())

@@ -194,7 +194,7 @@ pub fn execute(args: &ListArgs) -> crate::error::Result<()> {
         // Branch (only for local entries that have branch info)
         if entry.local_path.is_some() {
             let branch_label = entry.branch_label();
-            let divergence   = entry.divergence_hint();
+            let divergence = entry.divergence_hint();
 
             if !divergence.is_empty() {
                 let (div_color, div_text) = if entry.ahead > 0 && entry.behind > 0 {
@@ -206,15 +206,12 @@ pub fn execute(args: &ListArgs) -> crate::error::Result<()> {
                 };
                 println!(
                     "    {}Branch:{}    {}{}{} {}{}{}",
-                    YELLOW, RESET,
-                    GREEN, branch_label, RESET,
-                    div_color, div_text, RESET,
+                    YELLOW, RESET, GREEN, branch_label, RESET, div_color, div_text, RESET,
                 );
             } else {
                 println!(
                     "    {}Branch:{}    {}{}{}",
-                    YELLOW, RESET,
-                    GREEN, branch_label, RESET,
+                    YELLOW, RESET, GREEN, branch_label, RESET,
                 );
             }
 
@@ -222,19 +219,14 @@ pub fn execute(args: &ListArgs) -> crate::error::Result<()> {
             if let Some(upstream) = &entry.upstream_branch {
                 println!(
                     "    {}Tracking:{}  {}→ {}{}",
-                    YELLOW, RESET,
-                    DIM, upstream, RESET,
+                    YELLOW, RESET, DIM, upstream, RESET,
                 );
             }
 
             // Worktree kind badge when it's something other than plain main
             if let Some(wk) = &entry.worktree_kind {
                 if wk.is_linked() {
-                    println!(
-                        "    {}Worktree:{}  {}{}{}",
-                        YELLOW, RESET,
-                        DIM, wk, RESET,
-                    );
+                    println!("    {}Worktree:{}  {}{}{}", YELLOW, RESET, DIM, wk, RESET,);
                 }
             }
         }

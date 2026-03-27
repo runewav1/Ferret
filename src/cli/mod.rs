@@ -69,6 +69,12 @@ pub fn run() {
                 std::process::exit(1);
             }
         }
+        Some(commands::Commands::Config(config)) => {
+            if let Err(e) = commands::config::execute(&config) {
+                eprintln!("\x1b[31mError:\x1b[0m {}", e);
+                std::process::exit(1);
+            }
+        }
         None => {
             println!(
                 "  {}{}Ferret{} {}v0.1.0{} — Git Repository Manager",
@@ -86,8 +92,18 @@ pub fn run() {
             println!("    {}goto{}      Navigate to a repository", BOLD, RESET);
             println!("    {}init{}      Generate shell integration", BOLD, RESET);
             println!("    {}doctor{}    Check Ferret health", BOLD, RESET);
-            println!("    {}scan{}      Scan directories for git repositories", BOLD, RESET);
-            println!("    {}refresh{}   Refresh branch and tracker info for repositories", BOLD, RESET);
+            println!(
+                "    {}scan{}      Scan directories for git repositories",
+                BOLD, RESET
+            );
+            println!(
+                "    {}refresh{}   Refresh branch and tracker info for repositories",
+                BOLD, RESET
+            );
+            println!(
+                "    {}config{}    View and modify configuration",
+                BOLD, RESET
+            );
             println!();
             println!(
                 "  {}{}Use 'ferret --help' for full documentation.{}",

@@ -231,7 +231,7 @@ pub fn execute(args: &RepoArgs) -> crate::error::Result<()> {
         if let Some(path) = &entry.local_path {
             // Branch
             let branch_label = entry.branch_label();
-            let divergence   = entry.divergence_hint();
+            let divergence = entry.divergence_hint();
             if divergence.is_empty() {
                 println!(
                     "    {}Branch:{}    {}{}{}",
@@ -240,9 +240,7 @@ pub fn execute(args: &RepoArgs) -> crate::error::Result<()> {
             } else {
                 println!(
                     "    {}Branch:{}    {}{}{} {}{}{}",
-                    YELLOW, RESET,
-                    GREEN, branch_label, RESET,
-                    YELLOW, divergence, RESET,
+                    YELLOW, RESET, GREEN, branch_label, RESET, YELLOW, divergence, RESET,
                 );
             }
             if let Some(upstream) = &entry.upstream_branch {
@@ -254,14 +252,13 @@ pub fn execute(args: &RepoArgs) -> crate::error::Result<()> {
 
             // Worktree kind
             if let Some(wk) = &entry.worktree_kind {
-                println!(
-                    "    {}Worktree:{}  {}{}{}",
-                    YELLOW, RESET, DIM, wk, RESET,
-                );
+                println!("    {}Worktree:{}  {}{}{}", YELLOW, RESET, DIM, wk, RESET,);
                 if let Some(main_path) = &entry.main_repo_path {
                     println!(
                         "    {}Main repo:{} {}{}{}",
-                        YELLOW, RESET, DIM,
+                        YELLOW,
+                        RESET,
+                        DIM,
                         crate::pathutil::normalize_path(main_path),
                         RESET,
                     );
@@ -272,7 +269,11 @@ pub fn execute(args: &RepoArgs) -> crate::error::Result<()> {
             if let Some(fp) = &entry.fingerprint_hash {
                 println!(
                     "    {}ID:{}        {}{}{}",
-                    YELLOW, RESET, DIM, &fp[..16.min(fp.len())], RESET,
+                    YELLOW,
+                    RESET,
+                    DIM,
+                    &fp[..16.min(fp.len())],
+                    RESET,
                 );
             }
 
@@ -389,7 +390,7 @@ pub fn execute(args: &RepoArgs) -> crate::error::Result<()> {
 
             // Branch + divergence
             let branch_label = entry.branch_label();
-            let divergence   = entry.divergence_hint();
+            let divergence = entry.divergence_hint();
             if divergence.is_empty() {
                 println!(
                     "    {}Branch:{}    {}{}{}",
@@ -398,19 +399,14 @@ pub fn execute(args: &RepoArgs) -> crate::error::Result<()> {
             } else {
                 println!(
                     "    {}Branch:{}    {}{}{} {}{}{}",
-                    YELLOW, RESET,
-                    GREEN, branch_label, RESET,
-                    YELLOW, divergence, RESET,
+                    YELLOW, RESET, GREEN, branch_label, RESET, YELLOW, divergence, RESET,
                 );
             }
 
             // Worktree kind (only show when non-standard)
             if let Some(wk) = &entry.worktree_kind {
                 if wk.is_linked() {
-                    println!(
-                        "    {}Worktree:{}  {}{}{}",
-                        YELLOW, RESET, DIM, wk, RESET,
-                    );
+                    println!("    {}Worktree:{}  {}{}{}", YELLOW, RESET, DIM, wk, RESET,);
                 }
             }
         }

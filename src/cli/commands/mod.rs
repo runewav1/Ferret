@@ -1,4 +1,5 @@
 pub mod add;
+pub mod config;
 pub mod doctor;
 pub mod goto;
 pub mod init;
@@ -31,4 +32,6 @@ pub enum Commands {
     Scan(scan::ScanArgs),
     /// Refresh branch and tracker info for one or all registered repositories
     Refresh(refresh::RefreshArgs),
+    /// View and modify Ferret configuration
+    Config(config::ConfigArgs),
 }

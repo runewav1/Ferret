@@ -175,8 +175,8 @@ fn health_check() -> crate::error::Result<()> {
                     if local_entries.is_empty() {
                         println!(" {}{}n/a{} (no local entries)", DIM, BOLD, RESET);
                     } else {
-                        let mut missing      = Vec::new();
-                        let mut moved        = Vec::new();
+                        let mut missing = Vec::new();
+                        let mut moved = Vec::new();
                         let mut stale_branch = Vec::new();
 
                         for entry in &local_entries {
@@ -187,9 +187,8 @@ fn health_check() -> crate::error::Result<()> {
                                 if let Some(fp_hash) = &entry.fingerprint_hash {
                                     // Build a quick relocator snapshot to search the parent dir
                                     use git_tracker::identity::FingerprintKind;
-                                    use git_tracker::snapshot::RepoSnapshot;
                                     use git_tracker::relocator::{Relocator, RelocatorConfig};
-
+                                    use git_tracker::snapshot::RepoSnapshot;
 
                                     let snap = RepoSnapshot {
                                         fingerprint: git_tracker::RepoFingerprint::from_raw(
@@ -197,17 +196,14 @@ fn health_check() -> crate::error::Result<()> {
                                             FingerprintKind::HeadCommit,
                                             None,
                                         ),
-                                        workdir:            path.clone(),
-                                        git_dir:            path.join(".git"),
-                                        name:               entry.name.clone(),
-                                        is_bare:            false,
+                                        workdir: path.clone(),
+                                        git_dir: path.join(".git"),
+                                        name: entry.name.clone(),
+                                        is_bare: false,
                                         is_linked_worktree: false,
-                                        snapshotted_at:     0,
-                                        scan_root:          path
-                                            .parent()
-                                            .unwrap_or(path)
-                                            .to_path_buf(),
-                                        current_branch:     entry.current_branch.clone(),
+                                        snapshotted_at: 0,
+                                        scan_root: path.parent().unwrap_or(path).to_path_buf(),
+                                        current_branch: entry.current_branch.clone(),
                                     };
 
                                     let reloc_config = RelocatorConfig::builder()
@@ -254,7 +250,9 @@ fn health_check() -> crate::error::Result<()> {
                         if total_issues == 0 {
                             println!(
                                 " {}{}ok{} ({} local paths verified)",
-                                GREEN, BOLD, RESET,
+                                GREEN,
+                                BOLD,
+                                RESET,
                                 local_entries.len(),
                             );
                         } else {
@@ -266,13 +264,10 @@ fn health_check() -> crate::error::Result<()> {
 
                             for (name, path) in &missing {
                                 println!(
-                                    "      {}✗ missing:{} '{}' — path no longer exists",
+                                    "      {}missing:{} '{}' — path no longer exists",
                                     RED, RESET, name,
                                 );
-                                println!(
-                                    "        {}Was: {}{}",
-                                    DIM, path.display(), RESET,
-                                );
+                                println!("        {}Was: {}{}", DIM, path.display(), RESET,);
                             }
 
                             for (name, old_path, new_path) in &moved {
@@ -280,14 +275,8 @@ fn health_check() -> crate::error::Result<()> {
                                     "      {}→ moved:{} '{}' — found at new location",
                                     YELLOW, RESET, name,
                                 );
-                                println!(
-                                    "        {}From: {}{}",
-                                    DIM, old_path.display(), RESET,
-                                );
-                                println!(
-                                    "        {}  To: {}{}",
-                                    DIM, new_path.display(), RESET,
-                                );
+                                println!("        {}From: {}{}", DIM, old_path.display(), RESET,);
+                                println!("        {}  To: {}{}", DIM, new_path.display(), RESET,);
                                 println!(
                                     "        {}Hint: run 'ferret remove {}' then 'ferret add --path {}' to re-register{}",
                                     DIM, name, new_path.display(), RESET,
@@ -296,9 +285,9 @@ fn health_check() -> crate::error::Result<()> {
 
                             for (name, cached, live) in &stale_branch {
                                 let cached_str = cached.as_deref().unwrap_or("(detached)");
-                                let live_str   = live.as_deref().unwrap_or("(detached)");
+                                let live_str = live.as_deref().unwrap_or("(detached)");
                                 println!(
-                                    "      {}⚑ stale branch:{} '{}' — registry says '{}', git reports '{}'",
+                                    "      {}stale branch:{} '{}' — registry says '{}', git reports '{}'",
                                     YELLOW, RESET, name, cached_str, live_str,
                                 );
                                 println!(
@@ -322,50 +311,50 @@ fn health_check() -> crate::error::Result<()> {
     // --- Branch freshness summary ---
     print!("    {}Branch data...{}", YELLOW, RESET);
     match RegistryManager::new() {
-        Ok(manager) => {
-            match manager.get_all() {
-                Ok(entries) => {
-                    let local_with_branch: Vec<_> = entries
-                        .iter()
-                        .filter(|e| e.local_path.is_some() && e.current_branch.is_some())
-                        .collect();
-                    let no_branch_info: Vec<_> = entries
-                        .iter()
-                        .filter(|e| {
-                            e.local_path.is_some()
-                                && e.current_branch.is_none()
-                                && !e.head_detached
-                        })
-                        .collect();
+        Ok(manager) => match manager.get_all() {
+            Ok(entries) => {
+                let local_with_branch: Vec<_> = entries
+                    .iter()
+                    .filter(|e| e.local_path.is_some() && e.current_branch.is_some())
+                    .collect();
+                let no_branch_info: Vec<_> = entries
+                    .iter()
+                    .filter(|e| {
+                        e.local_path.is_some() && e.current_branch.is_none() && !e.head_detached
+                    })
+                    .collect();
 
-                    if entries.iter().all(|e| e.local_path.is_none()) {
-                        println!(" {}{}n/a{} (no local entries)", DIM, BOLD, RESET);
-                    } else if no_branch_info.is_empty() {
+                if entries.iter().all(|e| e.local_path.is_none()) {
+                    println!(" {}{}n/a{} (no local entries)", DIM, BOLD, RESET);
+                } else if no_branch_info.is_empty() {
+                    println!(
+                        " {}{}ok{} ({} with branch info)",
+                        GREEN,
+                        BOLD,
+                        RESET,
+                        local_with_branch.len(),
+                    );
+                } else {
+                    println!(
+                        " {}{}warn{}: {} local entries missing branch info",
+                        YELLOW,
+                        BOLD,
+                        RESET,
+                        no_branch_info.len(),
+                    );
+                    for entry in &no_branch_info {
                         println!(
-                            " {}{}ok{} ({} with branch info)",
-                            GREEN, BOLD, RESET,
-                            local_with_branch.len(),
+                            "      {}• '{}'{} — no branch data (run 'ferret refresh {}')",
+                            DIM, entry.name, RESET, entry.name,
                         );
-                    } else {
-                        println!(
-                            " {}{}warn{}: {} local entries missing branch info",
-                            YELLOW, BOLD, RESET,
-                            no_branch_info.len(),
-                        );
-                        for entry in &no_branch_info {
-                            println!(
-                                "      {}• '{}'{} — no branch data (run 'ferret refresh {}')",
-                                DIM, entry.name, RESET, entry.name,
-                            );
-                        }
-                        issues += 1;
                     }
-                }
-                Err(_) => {
-                    println!(" {}{}skip{} (registry unreadable)", DIM, BOLD, RESET);
+                    issues += 1;
                 }
             }
-        }
+            Err(_) => {
+                println!(" {}{}skip{} (registry unreadable)", DIM, BOLD, RESET);
+            }
+        },
         Err(_) => {
             println!(" {}{}skip{} (manager unavailable)", DIM, BOLD, RESET);
         }
