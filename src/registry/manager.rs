@@ -46,13 +46,13 @@ impl RefreshField {
     /// Human-readable label used in CLI output.
     pub fn label(&self) -> &'static str {
         match self {
-            RefreshField::Remote      => "remote",
-            RefreshField::Branch      => "branch",
-            RefreshField::Languages   => "languages",
+            RefreshField::Remote => "remote",
+            RefreshField::Branch => "branch",
+            RefreshField::Languages => "languages",
             RefreshField::Fingerprint => "fingerprint",
-            RefreshField::Worktree    => "worktree",
-            RefreshField::Commit      => "commit",
-            RefreshField::Path        => "path",
+            RefreshField::Worktree => "worktree",
+            RefreshField::Commit => "commit",
+            RefreshField::Path => "path",
         }
     }
 
@@ -129,7 +129,10 @@ impl RefreshResult {
 
     /// Returns the number of fields that were skipped.
     pub fn skip_count(&self) -> usize {
-        self.outcomes.iter().filter(|(_, o)| matches!(o, FieldOutcome::Skipped { .. })).count()
+        self.outcomes
+            .iter()
+            .filter(|(_, o)| matches!(o, FieldOutcome::Skipped { .. }))
+            .count()
     }
 }
 
@@ -351,7 +354,7 @@ impl RegistryManager {
     /// propagated as errors.
     pub fn refresh_fields(
         &mut self,
-        id:     &str,
+        id: &str,
         fields: &[RefreshField],
     ) -> crate::error::Result<RefreshResult> {
         let mut store = self.storage.load()?;
@@ -441,7 +444,10 @@ impl RegistryManager {
 /// Apply every field in `fields` to `entry`, returning one [`FieldOutcome`]
 /// per field.  Runs independently per field so a failure in one does not block
 /// the others.
-fn apply_fields(entry: &mut RegistryEntry, fields: &[RefreshField]) -> Vec<(RefreshField, FieldOutcome)> {
+fn apply_fields(
+    entry: &mut RegistryEntry,
+    fields: &[RefreshField],
+) -> Vec<(RefreshField, FieldOutcome)> {
     let mut outcomes = Vec::with_capacity(fields.len());
 
     for field in fields {
@@ -455,13 +461,13 @@ fn apply_fields(entry: &mut RegistryEntry, fields: &[RefreshField]) -> Vec<(Refr
 /// Dispatch one field update on `entry`.
 fn apply_single_field(entry: &mut RegistryEntry, field: &RefreshField) -> FieldOutcome {
     match field {
-        RefreshField::Remote      => refresh_remote(entry),
-        RefreshField::Branch      => refresh_branch(entry),
-        RefreshField::Languages   => refresh_languages(entry),
+        RefreshField::Remote => refresh_remote(entry),
+        RefreshField::Branch => refresh_branch(entry),
+        RefreshField::Languages => refresh_languages(entry),
         RefreshField::Fingerprint => refresh_fingerprint(entry),
-        RefreshField::Worktree    => refresh_worktree(entry),
-        RefreshField::Commit      => refresh_commit(entry),
-        RefreshField::Path        => refresh_path(entry),
+        RefreshField::Worktree => refresh_worktree(entry),
+        RefreshField::Commit => refresh_commit(entry),
+        RefreshField::Path => refresh_path(entry),
     }
 }
 
@@ -474,13 +480,17 @@ fn refresh_remote(entry: &mut RegistryEntry) -> FieldOutcome {
 
     let path = match &entry.local_path {
         Some(p) => p.clone(),
-        None    => return FieldOutcome::NotApplicable,
+        None => return FieldOutcome::NotApplicable,
     };
 
     // Ask git for all remotes.
     let remotes = match git::remote::get_remotes(&path) {
-        Ok(r)  => r,
-        Err(e) => return FieldOutcome::Skipped { reason: e.to_string() },
+        Ok(r) => r,
+        Err(e) => {
+            return FieldOutcome::Skipped {
+                reason: e.to_string(),
+            }
+        }
     };
 
     // Build a map: remote_name → fetch URL.
@@ -518,7 +528,7 @@ fn refresh_remote(entry: &mut RegistryEntry) -> FieldOutcome {
                 String::new()
             };
 
-            entry.remote_url  = Some(url);
+            entry.remote_url = Some(url);
             entry.remote_name = Some(remote_name);
 
             // Promote entry type when a remote is now present.
@@ -560,23 +570,23 @@ fn refresh_remote(entry: &mut RegistryEntry) -> FieldOutcome {
 fn refresh_branch(entry: &mut RegistryEntry) -> FieldOutcome {
     let path = match &entry.local_path {
         Some(p) => p.clone(),
-        None    => return FieldOutcome::NotApplicable,
+        None => return FieldOutcome::NotApplicable,
     };
 
     match git_tracker::get_branch_info(&path) {
         Ok(info) => {
-            let old_branch   = entry.current_branch.clone();
+            let old_branch = entry.current_branch.clone();
             let old_detached = entry.head_detached;
             let old_upstream = entry.upstream_branch.clone();
-            let old_ahead    = entry.ahead;
-            let old_behind   = entry.behind;
+            let old_ahead = entry.ahead;
+            let old_behind = entry.behind;
 
             entry.apply_branch_info(&info);
 
-            let branch_changed   = entry.current_branch  != old_branch;
-            let detached_changed = entry.head_detached    != old_detached;
-            let upstream_changed = entry.upstream_branch  != old_upstream;
-            let diverge_changed  = entry.ahead != old_ahead || entry.behind != old_behind;
+            let branch_changed = entry.current_branch != old_branch;
+            let detached_changed = entry.head_detached != old_detached;
+            let upstream_changed = entry.upstream_branch != old_upstream;
+            let diverge_changed = entry.ahead != old_ahead || entry.behind != old_behind;
 
             if branch_changed || detached_changed || upstream_changed || diverge_changed {
                 let new_label = entry.branch_label().to_string();
@@ -605,13 +615,17 @@ fn refresh_branch(entry: &mut RegistryEntry) -> FieldOutcome {
                     }
                 }
 
-                FieldOutcome::Changed { description: parts.join("; ") }
+                FieldOutcome::Changed {
+                    description: parts.join("; "),
+                }
             } else {
                 FieldOutcome::Unchanged
             }
         }
 
-        Err(e) => FieldOutcome::Skipped { reason: e.to_string() },
+        Err(e) => FieldOutcome::Skipped {
+            reason: e.to_string(),
+        },
     }
 }
 
@@ -619,7 +633,7 @@ fn refresh_branch(entry: &mut RegistryEntry) -> FieldOutcome {
 fn refresh_languages(entry: &mut RegistryEntry) -> FieldOutcome {
     let path = match &entry.local_path {
         Some(p) => p.clone(),
-        None    => return FieldOutcome::NotApplicable,
+        None => return FieldOutcome::NotApplicable,
     };
 
     match crate::language::detector::LanguageDetector::new().detect_language_names(&path) {
@@ -652,10 +666,12 @@ fn refresh_languages(entry: &mut RegistryEntry) -> FieldOutcome {
                     parts.push(format!("removed: {}", removed.join(", ")));
                 }
 
-                entry.languages          = new_langs;
+                entry.languages = new_langs;
                 entry.language_cache_time = Some(chrono::Utc::now());
 
-                FieldOutcome::Changed { description: parts.join("; ") }
+                FieldOutcome::Changed {
+                    description: parts.join("; "),
+                }
             } else {
                 // Even when unchanged, update the cache timestamp.
                 entry.language_cache_time = Some(chrono::Utc::now());
@@ -663,7 +679,9 @@ fn refresh_languages(entry: &mut RegistryEntry) -> FieldOutcome {
             }
         }
 
-        Err(e) => FieldOutcome::Skipped { reason: e.to_string() },
+        Err(e) => FieldOutcome::Skipped {
+            reason: e.to_string(),
+        },
     }
 }
 
@@ -671,7 +689,7 @@ fn refresh_languages(entry: &mut RegistryEntry) -> FieldOutcome {
 fn refresh_fingerprint(entry: &mut RegistryEntry) -> FieldOutcome {
     let path = match &entry.local_path {
         Some(p) => p.clone(),
-        None    => return FieldOutcome::NotApplicable,
+        None => return FieldOutcome::NotApplicable,
     };
 
     match git_tracker::identity::Fingerprinter::fast().identify(&path) {
@@ -681,7 +699,7 @@ fn refresh_fingerprint(entry: &mut RegistryEntry) -> FieldOutcome {
 
             if old_hash.as_deref() != Some(new_hash.as_str()) {
                 let description = match &old_hash {
-                    None      => format!("fingerprint set: {}", &new_hash[..16]),
+                    None => format!("fingerprint set: {}", &new_hash[..16]),
                     Some(old) => format!(
                         "fingerprint changed: {}… → {}…",
                         &old[..16.min(old.len())],
@@ -695,7 +713,9 @@ fn refresh_fingerprint(entry: &mut RegistryEntry) -> FieldOutcome {
             }
         }
 
-        Err(e) => FieldOutcome::Skipped { reason: e.to_string() },
+        Err(e) => FieldOutcome::Skipped {
+            reason: e.to_string(),
+        },
     }
 }
 
@@ -706,15 +726,15 @@ fn refresh_worktree(entry: &mut RegistryEntry) -> FieldOutcome {
 
     let path = match &entry.local_path {
         Some(p) => p.clone(),
-        None    => return FieldOutcome::NotApplicable,
+        None => return FieldOutcome::NotApplicable,
     };
 
     match git_tracker::worktree::WorktreeResolver::new().resolve(&path) {
         Ok(info) => {
             let new_kind: WorktreeKind = match &info.kind {
-                TK::Main            => WorktreeKind::Main,
+                TK::Main => WorktreeKind::Main,
                 TK::Linked { name } => WorktreeKind::Linked(name.clone()),
-                TK::Bare            => WorktreeKind::Bare,
+                TK::Bare => WorktreeKind::Bare,
             };
 
             let new_main_path: Option<std::path::PathBuf> = if info.kind.is_linked() {
@@ -723,10 +743,10 @@ fn refresh_worktree(entry: &mut RegistryEntry) -> FieldOutcome {
                 None
             };
 
-            let old_kind      = entry.worktree_kind.clone();
+            let old_kind = entry.worktree_kind.clone();
             let old_main_path = entry.main_repo_path.clone();
 
-            let kind_changed      = old_kind.as_ref() != Some(&new_kind);
+            let kind_changed = old_kind.as_ref() != Some(&new_kind);
             let main_path_changed = old_main_path != new_main_path;
 
             if kind_changed || main_path_changed {
@@ -735,13 +755,9 @@ fn refresh_worktree(entry: &mut RegistryEntry) -> FieldOutcome {
                     .map(|k| k.label().to_string())
                     .unwrap_or_else(|| "(unknown)".to_string());
 
-                let description = format!(
-                    "worktree kind: {} → {}",
-                    old_label,
-                    new_kind.label()
-                );
+                let description = format!("worktree kind: {} → {}", old_label, new_kind.label());
 
-                entry.worktree_kind  = Some(new_kind);
+                entry.worktree_kind = Some(new_kind);
                 entry.main_repo_path = new_main_path;
 
                 FieldOutcome::Changed { description }
@@ -750,7 +766,9 @@ fn refresh_worktree(entry: &mut RegistryEntry) -> FieldOutcome {
             }
         }
 
-        Err(e) => FieldOutcome::Skipped { reason: e.to_string() },
+        Err(e) => FieldOutcome::Skipped {
+            reason: e.to_string(),
+        },
     }
 }
 
@@ -758,19 +776,19 @@ fn refresh_worktree(entry: &mut RegistryEntry) -> FieldOutcome {
 fn refresh_commit(entry: &mut RegistryEntry) -> FieldOutcome {
     let path = match &entry.local_path {
         Some(p) => p.clone(),
-        None    => return FieldOutcome::NotApplicable,
+        None => return FieldOutcome::NotApplicable,
     };
 
     match git::commit::get_last_commit(&path) {
         Ok(Some(commit)) => {
             let old_time = entry.last_commit_time;
-            let old_msg  = entry.last_commit_message.clone();
+            let old_msg = entry.last_commit_message.clone();
 
             let new_time = Some(commit.timestamp);
-            let new_msg  = Some(commit.message.clone());
+            let new_msg = Some(commit.message.clone());
 
             let time_changed = old_time != new_time;
-            let msg_changed  = old_msg.as_deref() != new_msg.as_deref();
+            let msg_changed = old_msg.as_deref() != new_msg.as_deref();
 
             if time_changed || msg_changed {
                 let mut parts = Vec::new();
@@ -790,10 +808,12 @@ fn refresh_commit(entry: &mut RegistryEntry) -> FieldOutcome {
                     parts.push(format!("last message: {}", short));
                 }
 
-                entry.last_commit_time    = new_time;
+                entry.last_commit_time = new_time;
                 entry.last_commit_message = new_msg;
 
-                FieldOutcome::Changed { description: parts.join("; ") }
+                FieldOutcome::Changed {
+                    description: parts.join("; "),
+                }
             } else {
                 FieldOutcome::Unchanged
             }
@@ -802,7 +822,7 @@ fn refresh_commit(entry: &mut RegistryEntry) -> FieldOutcome {
         Ok(None) => {
             // Repository has no commits yet.
             if entry.last_commit_time.is_some() || entry.last_commit_message.is_some() {
-                entry.last_commit_time    = None;
+                entry.last_commit_time = None;
                 entry.last_commit_message = None;
                 FieldOutcome::Changed {
                     description: "commit data cleared (repository is now empty)".to_string(),
@@ -812,7 +832,9 @@ fn refresh_commit(entry: &mut RegistryEntry) -> FieldOutcome {
             }
         }
 
-        Err(e) => FieldOutcome::Skipped { reason: e.to_string() },
+        Err(e) => FieldOutcome::Skipped {
+            reason: e.to_string(),
+        },
     }
 }
 
@@ -820,7 +842,7 @@ fn refresh_commit(entry: &mut RegistryEntry) -> FieldOutcome {
 fn refresh_path(entry: &mut RegistryEntry) -> FieldOutcome {
     let current = match &entry.local_path {
         Some(p) => p.clone(),
-        None    => return FieldOutcome::NotApplicable,
+        None => return FieldOutcome::NotApplicable,
     };
 
     if !current.exists() {
@@ -843,7 +865,9 @@ fn refresh_path(entry: &mut RegistryEntry) -> FieldOutcome {
                 FieldOutcome::Unchanged
             }
         }
-        Err(e) => FieldOutcome::Skipped { reason: e.to_string() },
+        Err(e) => FieldOutcome::Skipped {
+            reason: e.to_string(),
+        },
     }
 }
 
@@ -852,12 +876,18 @@ fn refresh_path(entry: &mut RegistryEntry) -> FieldOutcome {
 /// Populate all git-tracker–derived fields on `entry` from the repository at
 /// `path`.  Any per-step failure is silently ignored.
 fn populate_tracker_fields(entry: &mut RegistryEntry, path: &Path) {
-    let branch_result   = git_tracker::get_branch_info(path);
+    let branch_result = git_tracker::get_branch_info(path);
     let worktree_result = git_tracker::worktree::WorktreeResolver::new().resolve(path);
-    let fp_hash         = git_tracker::identity::Fingerprinter::fast()
+    let fp_hash = git_tracker::identity::Fingerprinter::fast()
         .identify(path)
         .ok()
         .map(|id| id.fingerprint.hash);
+
+    // Populate last commit time and message so --by-commit and --inverse sort correctly.
+    if let Ok(Some(commit)) = crate::git::commit::get_last_commit(path) {
+        entry.last_commit_time = Some(commit.timestamp);
+        entry.last_commit_message = Some(commit.message);
+    }
 
     match (branch_result, worktree_result) {
         (Ok(branch), Ok(worktree)) => {
@@ -873,9 +903,9 @@ fn populate_tracker_fields(entry: &mut RegistryEntry, path: &Path) {
 
             entry.fingerprint_hash = fp_hash;
             entry.worktree_kind = Some(match &worktree.kind {
-                TK::Main            => WorktreeKind::Main,
+                TK::Main => WorktreeKind::Main,
                 TK::Linked { name } => WorktreeKind::Linked(name.clone()),
-                TK::Bare            => WorktreeKind::Bare,
+                TK::Bare => WorktreeKind::Bare,
             });
             entry.main_repo_path = if worktree.kind.is_linked() {
                 Some(worktree.main_repo_workdir.clone())
@@ -926,18 +956,21 @@ mod tests {
 
     #[test]
     fn refresh_field_display() {
-        assert_eq!(RefreshField::Remote.to_string(),      "remote");
-        assert_eq!(RefreshField::Branch.to_string(),      "branch");
-        assert_eq!(RefreshField::Languages.to_string(),   "languages");
+        assert_eq!(RefreshField::Remote.to_string(), "remote");
+        assert_eq!(RefreshField::Branch.to_string(), "branch");
+        assert_eq!(RefreshField::Languages.to_string(), "languages");
         assert_eq!(RefreshField::Fingerprint.to_string(), "fingerprint");
-        assert_eq!(RefreshField::Worktree.to_string(),    "worktree");
-        assert_eq!(RefreshField::Commit.to_string(),      "commit");
-        assert_eq!(RefreshField::Path.to_string(),        "path");
+        assert_eq!(RefreshField::Worktree.to_string(), "worktree");
+        assert_eq!(RefreshField::Commit.to_string(), "commit");
+        assert_eq!(RefreshField::Path.to_string(), "path");
     }
 
     #[test]
     fn field_outcome_changed_predicate() {
-        assert!(FieldOutcome::Changed { description: "x".into() }.changed());
+        assert!(FieldOutcome::Changed {
+            description: "x".into()
+        }
+        .changed());
         assert!(!FieldOutcome::Unchanged.changed());
         assert!(!FieldOutcome::Skipped { reason: "y".into() }.changed());
         assert!(!FieldOutcome::NotApplicable.changed());
@@ -948,14 +981,24 @@ mod tests {
         let result = RefreshResult {
             entry_name: "test".into(),
             outcomes: vec![
-                (RefreshField::Branch,      FieldOutcome::Changed { description: "x".into() }),
-                (RefreshField::Remote,      FieldOutcome::Unchanged),
-                (RefreshField::Languages,   FieldOutcome::Skipped { reason: "err".into() }),
+                (
+                    RefreshField::Branch,
+                    FieldOutcome::Changed {
+                        description: "x".into(),
+                    },
+                ),
+                (RefreshField::Remote, FieldOutcome::Unchanged),
+                (
+                    RefreshField::Languages,
+                    FieldOutcome::Skipped {
+                        reason: "err".into(),
+                    },
+                ),
                 (RefreshField::Fingerprint, FieldOutcome::NotApplicable),
             ],
         };
         assert_eq!(result.change_count(), 1);
-        assert_eq!(result.skip_count(),   1);
+        assert_eq!(result.skip_count(), 1);
         assert!(result.any_changed());
     }
 

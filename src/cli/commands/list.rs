@@ -448,33 +448,37 @@ fn calculate_divergence(
 ) -> Option<(u32, u32)> {
     let remote_sha = remote_output.split_whitespace().next()?;
 
-    let behind_output = std::process::Command::new("git")
-        .args([
-            "rev-list",
-            "--count",
-            &format!("{}..{}", branch, remote_sha),
-        ])
-        .current_dir(path)
-        .output()
-        .ok()?;
-    let behind: u32 = String::from_utf8_lossy(&behind_output.stdout)
-        .trim()
-        .parse()
-        .unwrap_or(0);
+    // git rev-list --count A..B = commits in B not in A
+    // branch..remote_sha = remote has these, local doesn't → "behind"
+    // remote_sha..branch = local has these, remote doesn't → "ahead"
+    //
+    // NOTE: The remote SHA from ls-remote may not be in the local object
+    // store. If rev-list fails, fall back to the origin/{branch} tracking
+    // ref which IS always available locally.
+    let try_rev_list = |base: &str, head: &str| -> Option<u32> {
+        let output = std::process::Command::new("git")
+            .args(["rev-list", "--count", &format!("{}..{}", base, head)])
+            .current_dir(path)
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        String::from_utf8_lossy(&output.stdout).trim().parse().ok()
+    };
 
-    let ahead_output = std::process::Command::new("git")
-        .args([
-            "rev-list",
-            "--count",
-            &format!("{}..{}", remote_sha, branch),
-        ])
-        .current_dir(path)
-        .output()
-        .ok()?;
-    let ahead: u32 = String::from_utf8_lossy(&ahead_output.stdout)
-        .trim()
-        .parse()
-        .unwrap_or(0);
+    // Try with the remote SHA first
+    let behind = try_rev_list(branch, remote_sha);
+    let ahead = try_rev_list(remote_sha, branch);
+
+    if let (Some(b), Some(a)) = (behind, ahead) {
+        return Some((b, a));
+    }
+
+    // Fallback: use origin/{branch} tracking ref (always available locally)
+    let remote_tracking = format!("origin/{}", branch);
+    let behind = try_rev_list(branch, &remote_tracking).unwrap_or(0);
+    let ahead = try_rev_list(&remote_tracking, branch).unwrap_or(0);
 
     Some((behind, ahead))
 }
