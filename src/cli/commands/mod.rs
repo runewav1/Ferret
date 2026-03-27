@@ -4,6 +4,8 @@ pub mod doctor;
 pub mod goto;
 pub mod init;
 pub mod list;
+pub mod pull;
+pub mod push;
 pub mod refresh;
 pub mod remove;
 pub mod repo;
@@ -34,4 +36,8 @@ pub enum Commands {
     Refresh(refresh::RefreshArgs),
     /// View and modify Ferret configuration
     Config(config::ConfigArgs),
+    /// Push local commits to remote for registered repositories
+    Push(push::PushArgs),
+    /// Pull remote changes for registered repositories
+    Pull(pull::PullArgs),
 }

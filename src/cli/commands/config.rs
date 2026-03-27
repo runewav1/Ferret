@@ -66,7 +66,7 @@ pub fn execute(args: &ConfigArgs) -> crate::error::Result<()> {
 }
 
 fn show_all(config: &crate::config::FerretConfig) {
-    println!("  {}{}Ferret configuration{}", BOLD, YELLOW, RESET);
+    println!("  {}{}Configuration{}", BOLD, YELLOW, RESET);
     println!();
 
     let config_path = crate::config::FerretConfig::config_file_path()

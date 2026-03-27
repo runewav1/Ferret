@@ -36,7 +36,7 @@ pub fn execute(args: &DoctorArgs) -> crate::error::Result<()> {
 }
 
 fn show_paths() -> crate::error::Result<()> {
-    println!("  {}{}Ferret paths{}", BOLD, YELLOW, RESET);
+    println!("  {}{}Paths{}", BOLD, YELLOW, RESET);
     println!();
 
     // Config dir
@@ -75,7 +75,7 @@ fn show_paths() -> crate::error::Result<()> {
 }
 
 fn health_check() -> crate::error::Result<()> {
-    println!("  {}{}Ferret doctor{}", BOLD, YELLOW, RESET);
+    println!("  {}{}Doctor{}", BOLD, YELLOW, RESET);
     println!();
 
     let mut issues = 0;

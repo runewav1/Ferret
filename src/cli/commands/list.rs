@@ -8,6 +8,7 @@ const BOLD: &str = "\x1b[1m";
 const CYAN: &str = "\x1b[36m";
 const YELLOW: &str = "\x1b[33m";
 const GREEN: &str = "\x1b[32m";
+const RED: &str = "\x1b[31m";
 const MAGENTA: &str = "\x1b[35m";
 const DIM: &str = "\x1b[2m";
 
@@ -24,9 +25,13 @@ const DIM: &str = "\x1b[2m";
         Examples:\n  \
         ferret list                    # All repos, by access time\n  \
         ferret list --by-commit        # Sort by last commit\n  \
+        ferret list --by-commit --inverse  # Oldest commits first\n  \
+        ferret list --inverse          # Least recently accessed first (dusty projects)\n  \
         ferret list --lang rust        # Filter to Rust projects\n  \
         ferret list --lang rust ts --or  # Rust OR TypeScript\n  \
-        ferret list --last-commit --stat # Show git info columns"
+        ferret list --last-commit --stat # Show git info columns\n  \
+        ferret list --remote-status     # Show local vs remote commit divergence\n  \
+        ferret list --dirt              # Only repos with uncommitted changes"
 )]
 pub struct ListArgs {
     /// Show all repositories (default behavior)
@@ -45,8 +50,9 @@ pub struct ListArgs {
     #[arg(long)]
     pub by_commit: bool,
 
-    /// Reverse the sort order to show oldest first.
-    /// Useful for finding stale/dusty repositories
+    /// Reverse the sort order of the active --by-* mode.
+    /// Without --by-* flags, reverses the default access-time order
+    /// to show the dustiest (least recently used) repositories first.
     #[arg(long)]
     pub inverse: bool,
 
@@ -71,6 +77,16 @@ pub struct ListArgs {
     /// Add a column showing count of staged files
     #[arg(long)]
     pub stage: bool,
+
+    /// Show local vs remote commit count comparison for each repo.
+    /// Uses `git ls-remote` to query the remote (works with any git host).
+    #[arg(long)]
+    pub remote_status: bool,
+
+    /// Show only repositories with uncommitted changes (dirty working tree).
+    /// Includes diff statistics for each dirty repo.
+    #[arg(long)]
+    pub dirt: bool,
 }
 
 fn format_duration_since(time: chrono::DateTime<chrono::Utc>) -> String {
@@ -103,30 +119,38 @@ pub fn execute(args: &ListArgs) -> crate::error::Result<()> {
         return Ok(());
     }
 
-    // Sort by last accessed by default
-    if args.by_access || (!args.by_change && !args.by_commit) {
-        entries.sort_by(|a, b| b.last_accessed.cmp(&a.last_accessed));
-        if args.inverse {
-            entries.reverse();
-        }
-    } else if args.by_change {
+    // Determine sort mode and direction
+    let sort_inverse = args.inverse;
+
+    if args.by_change {
         entries.sort_by(|a, b| {
             let a_time = a.last_changed.unwrap_or(a.created_at);
             let b_time = b.last_changed.unwrap_or(b.created_at);
-            b_time.cmp(&a_time)
+            if sort_inverse {
+                a_time.cmp(&b_time) // ascending = oldest first
+            } else {
+                b_time.cmp(&a_time) // descending = newest first
+            }
         });
-        if args.inverse {
-            entries.reverse();
-        }
     } else if args.by_commit {
         entries.sort_by(|a, b| {
             let a_time = a.last_commit_time.unwrap_or(a.created_at);
             let b_time = b.last_commit_time.unwrap_or(b.created_at);
-            b_time.cmp(&a_time)
+            if sort_inverse {
+                a_time.cmp(&b_time) // ascending = oldest first
+            } else {
+                b_time.cmp(&a_time) // descending = newest first
+            }
         });
-        if args.inverse {
-            entries.reverse();
-        }
+    } else {
+        // Default: by access (includes explicit --by-access or no flags)
+        entries.sort_by(|a, b| {
+            if sort_inverse {
+                a.last_accessed.cmp(&b.last_accessed) // ascending = oldest first
+            } else {
+                b.last_accessed.cmp(&a.last_accessed) // descending = newest first
+            }
+        });
     }
 
     // Filter by language (resolve aliases to canonical names)
@@ -147,6 +171,19 @@ pub fn execute(args: &ListArgs) -> crate::error::Result<()> {
         } else {
             entries.retain(|e| canonical_langs.iter().all(|lang| e.has_language(lang)));
         }
+    }
+
+    // Filter to dirty repos only
+    if args.dirt {
+        entries.retain(|e| {
+            if let Some(path) = &e.local_path {
+                git::status::get_repo_status(path)
+                    .map(|s| !s.is_clean)
+                    .unwrap_or(false)
+            } else {
+                false
+            }
+        });
     }
 
     // Display in git-log style
@@ -231,6 +268,39 @@ pub fn execute(args: &ListArgs) -> crate::error::Result<()> {
             }
         }
 
+        // Remote status (behind/ahead vs origin)
+        if args.remote_status && entry.local_path.is_some() {
+            if let Some((behind, ahead)) = get_remote_divergence(entry) {
+                if behind == 0 && ahead == 0 {
+                    println!(
+                        "    {}Remote:{}    {}in sync{}",
+                        YELLOW, RESET, GREEN, RESET
+                    );
+                } else {
+                    let mut parts = Vec::new();
+                    if behind > 0 {
+                        parts.push(format!(
+                            "{}behind {}{} {}",
+                            RED,
+                            behind,
+                            RESET,
+                            if behind == 1 { "commit" } else { "commits" }
+                        ));
+                    }
+                    if ahead > 0 {
+                        parts.push(format!(
+                            "{}ahead {}{} {}",
+                            GREEN,
+                            ahead,
+                            RESET,
+                            if ahead == 1 { "commit" } else { "commits" }
+                        ));
+                    }
+                    println!("    {}Remote:{}    {}", YELLOW, RESET, parts.join(" "));
+                }
+            }
+        }
+
         // Time column (based on sort mode)
         if args.by_change {
             if let Some(t) = entry.last_changed {
@@ -276,8 +346,8 @@ pub fn execute(args: &ListArgs) -> crate::error::Result<()> {
             }
         }
 
-        // Diff stat
-        if args.stat {
+        // Diff stat (always shown when --dirt)
+        if args.dirt || args.stat {
             if let Some(path) = &entry.local_path {
                 if let Ok(diff) = git::diff::get_working_diff(path) {
                     if diff.files_changed > 0 {
@@ -327,4 +397,84 @@ pub fn execute(args: &ListArgs) -> crate::error::Result<()> {
     );
 
     Ok(())
+}
+
+/// Get (behind, ahead) counts by comparing local branch to remote.
+/// Returns None if the repo has no remote, no branch, or git operations fail.
+fn get_remote_divergence(entry: &crate::registry::entry::RegistryEntry) -> Option<(u32, u32)> {
+    let path = entry.local_path.as_ref()?;
+    let branch = entry.current_branch.as_ref()?;
+
+    // Determine the remote name from upstream_branch (e.g., "origin/main" -> "origin")
+    let remote_name = entry
+        .upstream_branch
+        .as_ref()
+        .and_then(|ub| ub.split('/').next())
+        .unwrap_or("origin");
+
+    // Check that the remote has this branch
+    let output = std::process::Command::new("git")
+        .args(["ls-remote", "--heads", remote_name, branch])
+        .current_dir(path)
+        .output()
+        .ok()?;
+
+    if !output.status.success() || output.stdout.is_empty() {
+        // Fallback: try "origin" if the upstream remote didn't work
+        if remote_name != "origin" {
+            let fallback = std::process::Command::new("git")
+                .args(["ls-remote", "--heads", "origin", branch])
+                .current_dir(path)
+                .output()
+                .ok()?;
+            if fallback.status.success() && !fallback.stdout.is_empty() {
+                return calculate_divergence(
+                    path,
+                    branch,
+                    &String::from_utf8_lossy(&fallback.stdout),
+                );
+            }
+        }
+        return None;
+    }
+
+    calculate_divergence(path, branch, &String::from_utf8_lossy(&output.stdout))
+}
+
+fn calculate_divergence(
+    path: &std::path::Path,
+    branch: &str,
+    remote_output: &str,
+) -> Option<(u32, u32)> {
+    let remote_sha = remote_output.split_whitespace().next()?;
+
+    let behind_output = std::process::Command::new("git")
+        .args([
+            "rev-list",
+            "--count",
+            &format!("{}..{}", branch, remote_sha),
+        ])
+        .current_dir(path)
+        .output()
+        .ok()?;
+    let behind: u32 = String::from_utf8_lossy(&behind_output.stdout)
+        .trim()
+        .parse()
+        .unwrap_or(0);
+
+    let ahead_output = std::process::Command::new("git")
+        .args([
+            "rev-list",
+            "--count",
+            &format!("{}..{}", remote_sha, branch),
+        ])
+        .current_dir(path)
+        .output()
+        .ok()?;
+    let ahead: u32 = String::from_utf8_lossy(&ahead_output.stdout)
+        .trim()
+        .parse()
+        .unwrap_or(0);
+
+    Some((behind, ahead))
 }

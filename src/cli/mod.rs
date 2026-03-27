@@ -75,6 +75,18 @@ pub fn run() {
                 std::process::exit(1);
             }
         }
+        Some(commands::Commands::Push(push)) => {
+            if let Err(e) = commands::push::execute(&push) {
+                eprintln!("\x1b[31mError:\x1b[0m {}", e);
+                std::process::exit(1);
+            }
+        }
+        Some(commands::Commands::Pull(pull)) => {
+            if let Err(e) = commands::pull::execute(&pull) {
+                eprintln!("\x1b[31mError:\x1b[0m {}", e);
+                std::process::exit(1);
+            }
+        }
         None => {
             println!(
                 "  {}{}Ferret{} {}v0.1.0{} — Git Repository Manager",
@@ -91,7 +103,10 @@ pub fn run() {
             println!("    {}repo{}      Show repository info", BOLD, RESET);
             println!("    {}goto{}      Navigate to a repository", BOLD, RESET);
             println!("    {}init{}      Generate shell integration", BOLD, RESET);
-            println!("    {}doctor{}    Check Ferret health", BOLD, RESET);
+            println!(
+                "    {}doctor{}    Check registry and environment health",
+                BOLD, RESET
+            );
             println!(
                 "    {}scan{}      Scan directories for git repositories",
                 BOLD, RESET
@@ -102,6 +117,14 @@ pub fn run() {
             );
             println!(
                 "    {}config{}    View and modify configuration",
+                BOLD, RESET
+            );
+            println!(
+                "    {}push{}      Push local commits to remote for repositories",
+                BOLD, RESET
+            );
+            println!(
+                "    {}pull{}      Pull remote changes for repositories",
                 BOLD, RESET
             );
             println!();
