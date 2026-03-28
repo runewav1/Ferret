@@ -268,19 +268,16 @@ pub fn execute(args: &ListArgs) -> crate::error::Result<()> {
             }
         }
 
-        // Remote status (behind/ahead vs origin)
+        // Remote status (local ahead/behind vs remote)
         if args.remote_status && entry.local_path.is_some() {
             if let Some((behind, ahead)) = get_remote_divergence(entry) {
                 if behind == 0 && ahead == 0 {
-                    println!(
-                        "    {}Remote:{}    {}in sync{}",
-                        YELLOW, RESET, GREEN, RESET
-                    );
+                    println!("    {}Sync:{}     {}in sync{}", YELLOW, RESET, GREEN, RESET);
                 } else {
                     let mut parts = Vec::new();
                     if behind > 0 {
                         parts.push(format!(
-                            "{}behind {}{} {}",
+                            "{}remote ahead {}{} {}",
                             RED,
                             behind,
                             RESET,
@@ -289,14 +286,14 @@ pub fn execute(args: &ListArgs) -> crate::error::Result<()> {
                     }
                     if ahead > 0 {
                         parts.push(format!(
-                            "{}ahead {}{} {}",
+                            "{}local ahead {}{} {}",
                             GREEN,
                             ahead,
                             RESET,
                             if ahead == 1 { "commit" } else { "commits" }
                         ));
                     }
-                    println!("    {}Remote:{}    {}", YELLOW, RESET, parts.join(" "));
+                    println!("    {}Sync:{}     {}", YELLOW, RESET, parts.join("  "));
                 }
             }
         }

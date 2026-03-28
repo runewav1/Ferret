@@ -250,6 +250,36 @@ pub fn execute(args: &RepoArgs) -> crate::error::Result<()> {
                 );
             }
 
+            // Sync: local vs remote commit divergence
+            if let Some(current_branch) = &entry.current_branch {
+                if let Some((behind, ahead)) = get_repo_sync(path, current_branch, &entry) {
+                    if behind == 0 && ahead == 0 {
+                        println!("    {}Sync:{}     {}in sync{}", YELLOW, RESET, GREEN, RESET);
+                    } else {
+                        let mut parts = Vec::new();
+                        if behind > 0 {
+                            parts.push(format!(
+                                "{}remote ahead {}{} {}",
+                                RED,
+                                behind,
+                                RESET,
+                                if behind == 1 { "commit" } else { "commits" }
+                            ));
+                        }
+                        if ahead > 0 {
+                            parts.push(format!(
+                                "{}local ahead {}{} {}",
+                                GREEN,
+                                ahead,
+                                RESET,
+                                if ahead == 1 { "commit" } else { "commits" }
+                            ));
+                        }
+                        println!("    {}Sync:{}     {}", YELLOW, RESET, parts.join("  "));
+                    }
+                }
+            }
+
             // Worktree kind
             if let Some(wk) = &entry.worktree_kind {
                 println!("    {}Worktree:{}  {}{}{}", YELLOW, RESET, DIM, wk, RESET,);
@@ -454,6 +484,55 @@ fn format_duration(duration: chrono::Duration) -> String {
     } else {
         "just now".to_string()
     }
+}
+
+fn get_repo_sync(
+    path: &std::path::Path,
+    branch: &str,
+    entry: &crate::registry::entry::RegistryEntry,
+) -> Option<(u32, u32)> {
+    let remote_name = entry
+        .upstream_branch
+        .as_ref()
+        .and_then(|ub| ub.split('/').next())
+        .unwrap_or("origin");
+
+    let try_rev_list = |base: &str, head: &str| -> Option<u32> {
+        let output = std::process::Command::new("git")
+            .args(["rev-list", "--count", &format!("{}..{}", base, head)])
+            .current_dir(path)
+            .output()
+            .ok()?;
+        if !output.status.success() {
+            return None;
+        }
+        String::from_utf8_lossy(&output.stdout).trim().parse().ok()
+    };
+
+    // Try with ls-remote SHA first
+    let remote_output = std::process::Command::new("git")
+        .args(["ls-remote", "--heads", remote_name, branch])
+        .current_dir(path)
+        .output()
+        .ok()?;
+
+    if remote_output.status.success() && !remote_output.stdout.is_empty() {
+        let remote_sha = String::from_utf8_lossy(&remote_output.stdout)
+            .split_whitespace()
+            .next()?
+            .to_string();
+        let behind = try_rev_list(branch, &remote_sha);
+        let ahead = try_rev_list(&remote_sha, branch);
+        if let (Some(b), Some(a)) = (behind, ahead) {
+            return Some((b, a));
+        }
+    }
+
+    // Fallback: origin/{branch} tracking ref
+    let tracking = format!("origin/{}", branch);
+    let behind = try_rev_list(branch, &tracking).unwrap_or(0);
+    let ahead = try_rev_list(&tracking, branch).unwrap_or(0);
+    Some((behind, ahead))
 }
 
 #[cfg(test)]
