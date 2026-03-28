@@ -173,13 +173,14 @@ pub fn execute(args: &ListArgs) -> crate::error::Result<()> {
         }
     }
 
-    // Filter to dirty repos only
+    // Filter to dirty repos only (modified/staged/deleted tracked files, NOT untracked)
     if args.dirt {
         entries.retain(|e| {
             if let Some(path) = &e.local_path {
-                git::status::get_repo_status(path)
-                    .map(|s| !s.is_clean)
-                    .unwrap_or(false)
+                match git::status::get_repo_status(path) {
+                    Ok(s) => s.modified > 0 || s.staged > 0 || s.deleted > 0,
+                    Err(_) => false,
+                }
             } else {
                 false
             }
