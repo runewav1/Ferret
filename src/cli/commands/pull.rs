@@ -94,6 +94,7 @@ pub fn execute(args: &PullArgs) -> crate::error::Result<()> {
             Ok(output) => {
                 if output.contains("Already up to date") || output.contains("Already up-to-date") {
                     println!("{}up to date{}", DIM, RESET);
+                    skipped += 1;
                 } else {
                     let summary = output
                         .lines()
@@ -101,8 +102,8 @@ pub fn execute(args: &PullArgs) -> crate::error::Result<()> {
                         .or_else(|| output.lines().find(|l| l.contains("Updating")))
                         .unwrap_or("pulled");
                     println!("{}", summary.trim());
+                    pulled += 1;
                 }
-                pulled += 1;
             }
             Err(e) => {
                 println!("{}failed{}: {}", RED, RESET, e);

@@ -96,14 +96,15 @@ pub fn execute(args: &PushArgs) -> crate::error::Result<()> {
             Ok(output) => {
                 if output.trim().is_empty() || output.contains("Everything up-to-date") {
                     println!("{}up to date{}", DIM, RESET);
+                    skipped += 1;
                 } else {
                     let summary = output
                         .lines()
                         .find(|l| l.contains("->"))
                         .unwrap_or("pushed");
                     println!("{}", summary.trim());
+                    pushed += 1;
                 }
-                pushed += 1;
             }
             Err(e) => {
                 println!("{}failed{}: {}", RED, RESET, e);
